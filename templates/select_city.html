@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Select City — {{ movie.title }}{% endblock %}
+{% block content %}
+<div class="container-xl py-5">
+  <nav class="breadcrumb-nav mb-4">
+    <a href="{{ url_for('home') }}" class="bc-link">Home</a>
+    <i class="bi bi-chevron-right bc-sep"></i>
+    <a href="{{ url_for('movie_detail', mid=movie.id) }}" class="bc-link">{{ movie.title }}</a>
+    <i class="bi bi-chevron-right bc-sep"></i>
+    <span class="text-muted">Select City</span>
+  </nav>
+
+  <div class="row g-4">
+    <div class="col-lg-3">
+      <div class="sidebar-mini">
+        <img src="{{ movie.poster_url }}" alt="{{ movie.title }}" class="sidebar-poster"
+             onerror="this.onerror=null;this.src='/static/images/placeholder.svg'">
+        <div class="p-3">
+          <h6 class="text-light fw-bold mb-1">{{ movie.title }}</h6>
+          <span class="dchip rating-chip mb-2 d-inline-flex"><i class="bi bi-star-fill text-warning me-1"></i>{{ movie.rating }}</span>
+          <div class="genre-pills">
+            {% for g in movie.genre.split(',')[:2] %}<span class="gpill">{{ g.strip() }}</span>{% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-9">
+      <h2 class="sec-title mb-1">Select Your City</h2>
+      <p class="text-muted mb-4">Showing cities with available shows for {{ movie.title }}</p>
+      {% if cities %}
+      <div class="row g-3">
+        {% for city in cities %}
+        <div class="col-6 col-md-4 col-lg-3">
+          <a href="{{ url_for('select_theater', mid=movie.id, city_id=city.id) }}" class="city-card">
+            <div class="city-card-icon"><i class="bi bi-geo-alt-fill"></i></div>
+            <div class="city-card-name">{{ city.name }}</div>
+            <div class="city-card-arrow"><i class="bi bi-arrow-right"></i></div>
+          </a>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
+        <h4>No shows available</h4>
+        <p class="text-muted">Please check back soon for upcoming shows.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

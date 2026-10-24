@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Select Theater — {{ movie.title }}{% endblock %}
+{% block content %}
+<div class="container-xl py-5">
+  <nav class="breadcrumb-nav mb-4">
+    <a href="{{ url_for('home') }}" class="bc-link">Home</a>
+    <i class="bi bi-chevron-right bc-sep"></i>
+    <a href="{{ url_for('movie_detail', mid=movie.id) }}" class="bc-link">{{ movie.title }}</a>
+    <i class="bi bi-chevron-right bc-sep"></i>
+    <a href="{{ url_for('select_city', mid=movie.id) }}" class="bc-link">Select City</a>
+    <i class="bi bi-chevron-right bc-sep"></i>
+    <span class="text-muted">{{ city.name }}</span>
+  </nav>
+
+  <div class="row g-4">
+    <!-- Sidebar -->
+    <div class="col-lg-3">
+      <div class="sidebar-mini sticky-top" style="top:80px;">
+        <img src="{{ movie.poster_url }}" alt="{{ movie.title }}" class="sidebar-poster"
+             onerror="this.onerror=null;this.src='/static/images/placeholder.svg'">
+        <div class="p-3">
+          <h6 class="text-light fw-bold mb-1">{{ movie.title }}</h6>
+          <p class="text-muted small mb-1"><i class="bi bi-geo-alt me-1"></i>{{ city.name }}</p>
+          <span class="dchip rating-chip d-inline-flex"><i class="bi bi-star-fill text-warning me-1"></i>{{ movie.rating }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main -->
+    <div class="col-lg-9">
+      <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+        <h2 class="sec-title mb-0">Theaters in {{ city.name }}</h2>
+        <!-- Date Picker -->
+        <div class="date-scroll">
+          {% for d in dates %}
+          {% set dobj = d | string %}
+          <a href="{{ url_for('select_theater', mid=movie.id, city_id=city.id, date=d) }}"
+             class="date-chip {{ 'active' if selected_date == d }}">
+            <div class="date-chip-day">{{ ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'][(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].index(dobj[8:][:2]) if dobj[8:][:2] in ['Mo','Tu','We','Th','Fr','Sa','Su'] else 0)] if false else '' }}</div>
+            <div class="date-chip-num">{{ d[8:] }}</div>
+            <div class="date-chip-mon">{{ ['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d[5:7]|int] }}</div>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+
+      {% if theater_data %}
+        {% for theater in theater_data %}
+        <div class="theater-card mb-4">
+          <div class="theater-header">
+            <div>
+              <h5 class="theater-name"><i class="bi bi-building me-2 wine-text"></i>{{ theater.name }}</h5>
+              <p class="theater-addr"><i class="bi bi-geo-alt me-1"></i>{{ theater.address }}</p>
+            </div>
+          </div>
+          <div class="theater-screens">
+            {% for screen in theater.screens %}
+            <div class="screen-block">
+              <div class="screen-label"><i class="bi bi-display me-2"></i>{{ screen.name }}</div>
+              <div class="showtimes-row">
+                {% for st in screen.showtimes %}
+                <a href="{{ url_for('seat_selection', st_id=st.id) }}" class="showtime-chip">
+                  <div class="st-time">{{ st.time }}</div>
+                  <div class="st-price">from ₹{{ st.standard|int }}</div>
+                </a>
+                {% endfor %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon"><i class="bi bi-calendar-x"></i></div>
+        <h4>No shows on this date</h4>
+        <p class="text-muted">Try another date above.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

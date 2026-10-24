@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% block title %}Select Seats — {{ showtime.movie_title }}{% endblock %}
+{% block content %}
+<div class="container-xl py-4">
+
+  <!-- Show Info Bar -->
+  <div class="show-info-bar mb-4">
+    <div class="sib-item">
+      <div class="sib-label">Movie</div>
+      <div class="sib-val">{{ showtime.movie_title }}</div>
+    </div>
+    <div class="sib-div"></div>
+    <div class="sib-item">
+      <div class="sib-label">Theater</div>
+      <div class="sib-val">{{ showtime.theater_name }}</div>
+    </div>
+    <div class="sib-div"></div>
+    <div class="sib-item">
+      <div class="sib-label">Screen</div>
+      <div class="sib-val">{{ showtime.screen_name }}</div>
+    </div>
+    <div class="sib-div"></div>
+    <div class="sib-item">
+      <div class="sib-label">Date</div>
+      <div class="sib-val">{{ showtime.show_date.strftime('%d %b %Y') }}</div>
+    </div>
+    <div class="sib-div"></div>
+    <div class="sib-item">
+      <div class="sib-label">Time</div>
+      <div class="sib-val">{{ '%02d:%02d'|format(showtime.show_time.seconds//3600,(showtime.show_time.seconds%3600)//60) if showtime.show_time.__class__.__name__=='timedelta' else str(showtime.show_time)[:5] }}</div>
+    </div>
+    <div class="sib-div"></div>
+    <div class="sib-item">
+      <div class="sib-label">City</div>
+      <div class="sib-val wine-text">{{ showtime.city_name }}</div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <!-- SEAT MAP -->
+    <div class="col-lg-8">
+      <div class="seat-map-card">
+        <!-- Screen -->
+        <div class="screen-viz">
+          <div class="screen-bar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="me-2">
+              <rect x="2" y="3" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M8 21h8M12 17v4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            SCREEN — ALL EYES THIS WAY
+          </div>
+          <div class="screen-glow"></div>
+        </div>
+
+        <!-- Price Tiers Legend -->
+        <div class="price-legend">
+          <div class="pl-item">
+            <div class="pl-swatch premium-swatch"></div>
+            <div><div class="pl-tier">PREMIUM</div><div class="pl-price">₹{{ showtime.price_premium|int }}</div></div>
+          </div>
+          <div class="pl-item">
+            <div class="pl-swatch standard-swatch"></div>
+            <div><div class="pl-tier">STANDARD</div><div class="pl-price">₹{{ showtime.price_standard|int }}</div></div>
+          </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="seat-legend">
+          <div class="sl-item"><div class="sl-demo avail-demo"></div><span>Available</span></div>
+          <div class="sl-item"><div class="sl-demo sel-demo"></div><span>Selected</span></div>
+          <div class="sl-item"><div class="sl-demo booked-demo"></div><span>Booked</span></div>
+        </div>
+
+        <!-- Seat Grid -->
+        <div class="seat-grid-outer" id="seatGrid">
+          {% for row in rows %}
+          <div class="seat-row-line">
+            <span class="row-tag">{{ row }}</span>
+            <div class="seats-wrap">
+              {% for col in cols %}
+                {% set sid = row ~ col %}
+                {% if col == 4 %}<div class="aisle"></div>{% endif %}
+                {% if col == 8 %}<div class="aisle"></div>{% endif %}
+                <div class="seat {{ 'seat-booked' if sid in booked_seats else 'seat-avail' }} {{ 'seat-premium' if row in ['A','B','C'] else 'seat-std' }}"
+                     data-seat="{{ sid }}"
+                     data-price="{{ showtime.price_premium if row in ['A','B','C'] else showtime.price_standard }}"
+                     {% if sid not in booked_seats %}onclick="toggleSeat(this)"{% endif %}
+                     title="Seat {{ sid }}">
+                  <span class="seat-label">{{ sid }}</span>
+                  <div class="seat-foot"></div>
+                </div>
+              {% endfor %}
+            </div>
+            <span class="row-tag">{{ row }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- BOOKING SUMMARY -->
+    <div class="col-lg-4">
+      <div class="bk-summary" id="bkSummary">
+        <div class="bk-summary-head"><i class="bi bi-receipt me-2"></i>Booking Summary</div>
+        <div class="bk-movie-info">
+          <div class="fw-semibold text-light">{{ showtime.movie_title }}</div>
+          <div class="text-muted small">{{ showtime.theater_name }}</div>
+          <div class="text-muted small">{{ showtime.show_date.strftime('%d %b %Y') }}</div>
+        </div>
+
+        <div class="bk-row"><span class="text-muted">Selected</span><span id="sel-count" class="text-light">None</span></div>
+        <div class="sel-pills-wrap" id="selPills"><span class="text-muted small">Tap seats to select</span></div>
+
+        <div class="bk-divider"></div>
+        <div class="bk-row"><span class="text-muted">Subtotal</span><span class="text-light">₹<span id="val-sub">0</span></span></div>
+        <div class="bk-row"><span class="text-muted">Booking Fee (5%)</span><span class="text-light">₹<span id="val-fee">0</span></span></div>
+        <div class="bk-divider"></div>
+        <div class="bk-total-row">
+          <span class="fw-bold text-light">Total</span>
+          <span class="bk-total-val">₹<span id="val-total">0</span></span>
+        </div>
+
+        <button id="proceedBtn" class="cn-btn-wine w-100 mt-3" style="padding:13px;font-size:.95rem;" onclick="proceedToFood()" disabled>
+          <i class="bi bi-arrow-right-circle me-2"></i>Proceed to Food & Confirm
+        </button>
+        <div class="secure-note mt-2"><i class="bi bi-shield-check-fill text-success me-1"></i>Safe & Secure Booking</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Processing Modal -->
+<div class="modal fade" id="procModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="background:var(--card);border:1px solid var(--border);border-radius:16px;text-align:center;padding:40px 20px;">
+      <div class="cn-spinner mx-auto mb-3"></div>
+      <h6 class="text-light">Please wait...</h6>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SHOWTIME_ID = {{ showtime.id }};
+const STD_PRICE   = {{ showtime.price_standard }};
+const PREM_PRICE  = {{ showtime.price_premium }};
+let selected = {};   // {seatId: price}
+
+function toggleSeat(el) {
+  const sid   = el.dataset.seat;
+  const price = parseFloat(el.dataset.price);
+  if (el.classList.contains('seat-booked')) return;
+  if (el.classList.contains('seat-selected')) {
+    el.classList.remove('seat-selected');
+    el.classList.add(el.dataset.orig || 'seat-avail');
+    delete selected[sid];
+  } else {
+    el.dataset.orig = el.classList.contains('seat-premium') ? 'seat-avail' : 'seat-avail';
+    el.classList.remove('seat-avail');
+    el.classList.add('seat-selected');
+    selected[sid] = price;
+  }
+  updateSummary();
+}
+
+function updateSummary() {
+  const seats   = Object.keys(selected);
+  const sub     = Object.values(selected).reduce((a,b)=>a+b, 0);
+  const fee     = Math.round(sub * 0.05);
+  const total   = sub + fee;
+
+  document.getElementById('sel-count').textContent = seats.length > 0
+    ? seats.length + ' seat' + (seats.length > 1 ? 's' : '') : 'None';
+  document.getElementById('val-sub').textContent   = sub;
+  document.getElementById('val-fee').textContent   = fee;
+  document.getElementById('val-total').textContent = total;
+
+  const pillWrap = document.getElementById('selPills');
+  if (seats.length === 0) {
+    pillWrap.innerHTML = '<span class="text-muted small">Tap seats to select</span>';
+  } else {
+    pillWrap.innerHTML = seats.sort().map(s =>
+      `<span class="sel-pill">${s} <span style="opacity:.6;font-size:.65rem">₹${selected[s]|0}</span></span>`
+    ).join('');
+  }
+  document.getElementById('proceedBtn').disabled = seats.length === 0;
+}
+
+function proceedToFood() {
+  const seats = Object.keys(selected).sort();
+  const sub   = Object.values(selected).reduce((a,b)=>a+b,0);
+  const fee   = Math.round(sub * 0.05);
+  const total = sub + fee;
+  const url   = `/food/${SHOWTIME_ID}?seats=${seats.join(',')}&amount=${total}`;
+  // Show loading briefly
+  const m = new bootstrap.Modal(document.getElementById('procModal'));
+  m.show();
+  setTimeout(() => { window.location.href = url; }, 600);
+}
+</script>
+{% endblock %}

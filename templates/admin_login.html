@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Admin Login — CineNest{% endblock %}
+{% block content %}
+<div class="auth-page">
+  <div class="auth-glow" style="background:radial-gradient(circle,rgba(124,16,52,.25) 0%,transparent 65%)"></div>
+  <div class="container">
+    <div class="row justify-content-center align-items-center" style="min-height:90vh">
+      <div class="col-md-4 col-lg-3">
+        <div class="auth-card">
+          <div class="auth-header">
+            <div class="auth-icon" style="background:linear-gradient(135deg,#7c1034,#3d0018)"><i class="bi bi-shield-lock-fill"></i></div>
+            <h2 class="auth-title">Admin Panel</h2>
+            <p class="auth-sub">CineNest Management Console</p>
+          </div>
+          <form method="POST">
+            <div class="auth-field">
+              <label>Username</label>
+              <div class="field-grp">
+                <i class="bi bi-person-badge field-ico"></i>
+                <input type="text" name="username" class="f-input" placeholder="admin" required autofocus>
+              </div>
+            </div>
+            <div class="auth-field">
+              <label>Password</label>
+              <div class="field-grp">
+                <i class="bi bi-key field-ico"></i>
+                <input type="password" name="password" class="f-input" placeholder="••••••••" required>
+              </div>
+            </div>
+            <button type="submit" class="cn-btn-wine w-100 auth-submit">
+              <i class="bi bi-shield-check me-2"></i>Access Dashboard
+            </button>
+          </form>
+          <p class="text-muted text-center small mt-3">Default: admin / admin123</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

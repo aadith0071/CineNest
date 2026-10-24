@@ -1,0 +1,365 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — CineNest{% endblock %}
+{% block content %}
+<div class="container-xl py-4">
+  <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+    <div><h2 class="sec-title mb-0">Admin Dashboard</h2><p class="text-muted mb-0">CineNest Management Console</p></div>
+    <a href="{{ url_for('admin_logout') }}" class="cn-btn-ghost btn-sm"><i class="bi bi-box-arrow-right me-1"></i>Logout</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="row g-3 mb-5">
+    {% for icon,label,val,clr in [
+      ('camera-reels-fill','Movies',stats.movies,'#7c1034'),
+      ('people-fill','Users',stats.users,'#11998e'),
+      ('building','Theaters',stats.theaters,'#f7971e'),
+      ('ticket-perforated-fill','Bookings',stats.bookings,'#6d28d9'),
+      ('currency-rupee','Revenue','₹'~(stats.revenue|int),'#3b82f6')
+    ] %}
+    <div class="col-6 col-xl">
+      <div class="admin-stat" style="border-left-color:{{ clr }}">
+        <i class="bi bi-{{ icon }} admin-stat-ico" style="color:{{ clr }}"></i>
+        <div class="admin-stat-val">{{ val }}</div>
+        <div class="admin-stat-lbl">{{ label }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Tabs -->
+  <div class="cn-tabs-wrap mb-4" id="adminTabs">
+    {% for tab,ico,lbl in [
+      ('movies','camera-reels','Movies'),
+      ('theaters','building','Theaters'),
+      ('screens','display','Screens'),
+      ('showtimes','calendar-week','Showtimes'),
+      ('bookings','ticket-perforated','Bookings'),
+      ('users','people','Users')
+    ] %}
+    <button class="cn-tab {{ 'active' if loop.first }}" onclick="adminTab('{{ tab }}',this)">
+      <i class="bi bi-{{ ico }} me-1"></i>{{ lbl }}
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- MOVIES TAB -->
+  <div id="atab-movies">
+    <div class="row g-4">
+      <div class="col-xl-8">
+        <div class="admin-panel">
+          <div class="admin-panel-head">All Movies ({{ movies|length }})</div>
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead><tr><th>Movie</th><th>Lang</th><th>Genre</th><th>Rating</th><th>Year</th><th>Trailer</th><th>Actions</th></tr></thead>
+              <tbody>
+                {% for m in movies %}
+                <tr>
+                  <td>
+                    <div class="d-flex align-items-center gap-2">
+                      <img src="{{ m.poster_url }}" alt="{{ m.title }}" class="tbl-thumb"
+                           onerror="this.onerror=null;this.src='/static/images/placeholder.svg'">
+                      <div>
+                        <div class="text-light fw-semibold" style="font-size:.82rem">{{ m.title }}</div>
+                        <div class="text-muted" style="font-size:.7rem">{{ m.duration }}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td><span class="lang-badge" style="font-size:.68rem">{{ m.language }}</span></td>
+                  <td class="text-muted" style="font-size:.75rem">{{ m.genre[:25] }}{% if m.genre|length > 25 %}…{% endif %}</td>
+                  <td><span class="rating-badge" style="font-size:.7rem"><i class="bi bi-star-fill"></i> {{ m.rating }}</span></td>
+                  <td class="text-muted small">{{ m.release_year or '—' }}</td>
+                  <td>
+                    {% if m.trailer_id and m.trailer_id != 'placeholder' %}
+                    <button class="btn-ico text-success" onclick="playTrailer('{{ m.trailer_id }}','{{ m.title }}')"><i class="bi bi-play-circle-fill"></i></button>
+                    {% else %}<span class="text-muted small">—</span>{% endif %}
+                  </td>
+                  <td>
+                    <div class="d-flex gap-1">
+                      <button class="btn-ico text-info" onclick="openEditMovie({{ m.id }})"><i class="bi bi-pencil"></i></button>
+                      <form method="POST" action="{{ url_for('admin_delete_movie', mid=m.id) }}" onsubmit="return confirm('Delete?')">
+                        <button class="btn-ico text-danger"><i class="bi bi-trash3"></i></button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-4">
+        <div class="admin-panel">
+          <div class="admin-panel-head"><i class="bi bi-plus-circle-fill wine-text me-2"></i>Add Movie</div>
+          <form method="POST" action="{{ url_for('admin_add_movie') }}" enctype="multipart/form-data">
+            <div class="af"><input type="text" name="title" class="f-input" placeholder="Title *" required></div>
+            <div class="af"><textarea name="description" class="f-input" rows="2" placeholder="Description"></textarea></div>
+            <div class="row g-2">
+              <div class="col-7"><div class="af">
+                <select name="language" class="f-input" required>
+                  <option value="">Language *</option>
+                  {% for l in ['Tamil','Telugu','Malayalam','Hindi','Hollywood'] %}
+                  <option value="{{ l }}">{{ l }}</option>{% endfor %}
+                </select>
+              </div></div>
+              <div class="col-5"><div class="af"><input type="number" name="year" class="f-input" placeholder="Year" min="1990" max="2030"></div></div>
+            </div>
+            <div class="af"><input type="text" name="genre" class="f-input" placeholder="Genre (Action, Drama)"></div>
+            <div class="row g-2">
+              <div class="col-6"><div class="af"><input type="text" name="duration" class="f-input" placeholder="Duration"></div></div>
+              <div class="col-6"><div class="af"><input type="number" name="rating" class="f-input" placeholder="Rating" step="0.1" min="0" max="10"></div></div>
+            </div>
+            <div class="af"><input type="text" name="cast" class="f-input" placeholder="Cast members"></div>
+            <div class="af"><input type="text" name="director" class="f-input" placeholder="Director"></div>
+            <div class="af"><input type="text" name="trailer_id" class="f-input" placeholder="YouTube Video ID"></div>
+            <div class="af"><input type="text" name="poster_url" class="f-input" placeholder="Poster URL (optional)"></div>
+            <div class="af"><label class="text-muted small d-block mb-1">Or Upload Poster</label><input type="file" name="poster" class="f-input" accept="image/*"></div>
+            <button type="submit" class="cn-btn-wine w-100"><i class="bi bi-plus me-1"></i>Add Movie</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- THEATERS TAB -->
+  <div id="atab-theaters" style="display:none">
+    <div class="row g-4">
+      <div class="col-xl-8">
+        <div class="admin-panel">
+          <div class="admin-panel-head">All Theaters</div>
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead><tr><th>#</th><th>Theater</th><th>City</th><th>Address</th></tr></thead>
+              <tbody>
+                {% for t in theaters %}
+                <tr>
+                  <td class="text-muted">{{ loop.index }}</td>
+                  <td class="text-light fw-semibold small">{{ t.name }}</td>
+                  <td><span class="city-chip" style="font-size:.7rem">{{ t.city_name }}</span></td>
+                  <td class="text-muted small">{{ t.address }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-4">
+        <div class="admin-panel">
+          <div class="admin-panel-head"><i class="bi bi-plus-circle-fill wine-text me-2"></i>Add Theater</div>
+          <form method="POST" action="{{ url_for('admin_add_theater') }}">
+            <div class="af">
+              <select name="city_id" class="f-input" required>
+                <option value="">Select City *</option>
+                {% for c in cities %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="af"><input type="text" name="name" class="f-input" placeholder="Theater Name *" required></div>
+            <div class="af"><input type="text" name="address" class="f-input" placeholder="Address"></div>
+            <button type="submit" class="cn-btn-wine w-100"><i class="bi bi-plus me-1"></i>Add Theater</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREENS TAB -->
+  <div id="atab-screens" style="display:none">
+    <div class="row g-4">
+      <div class="col-xl-8">
+        <div class="admin-panel">
+          <div class="admin-panel-head">All Screens</div>
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead><tr><th>#</th><th>Screen</th><th>Theater</th><th>Seats</th></tr></thead>
+              <tbody>
+                {% for s in screens %}
+                <tr>
+                  <td class="text-muted">{{ loop.index }}</td>
+                  <td class="text-light small fw-semibold">{{ s.name }}</td>
+                  <td class="text-muted small">{{ s.theater_name }}</td>
+                  <td><span class="gpill">{{ s.total_seats }}</span></td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="col-xl-4">
+        <div class="admin-panel">
+          <div class="admin-panel-head"><i class="bi bi-plus-circle-fill wine-text me-2"></i>Add Screen</div>
+          <form method="POST" action="{{ url_for('admin_add_screen') }}">
+            <div class="af">
+              <select name="theater_id" class="f-input" required>
+                <option value="">Select Theater *</option>
+                {% for t in theaters %}<option value="{{ t.id }}">{{ t.name }} ({{ t.city_name }})</option>{% endfor %}
+              </select>
+            </div>
+            <div class="af"><input type="text" name="name" class="f-input" placeholder="Screen Name (e.g. Screen 1)" required></div>
+            <div class="af"><input type="number" name="seats" class="f-input" placeholder="Total Seats" value="80"></div>
+            <button type="submit" class="cn-btn-wine w-100"><i class="bi bi-plus me-1"></i>Add Screen</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SHOWTIMES TAB -->
+  <div id="atab-showtimes" style="display:none">
+    <div class="admin-panel">
+      <div class="admin-panel-head"><i class="bi bi-plus-circle-fill wine-text me-2"></i>Add Showtime</div>
+      <form method="POST" action="{{ url_for('admin_add_showtime') }}" class="row g-3 align-items-end">
+        <div class="col-md-3"><label class="text-muted small d-block mb-1">Movie *</label>
+          <select name="movie_id" class="f-input" required>
+            <option value="">— Movie —</option>
+            {% for m in movies %}<option value="{{ m.id }}">{{ m.title }} ({{ m.language }})</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3"><label class="text-muted small d-block mb-1">Screen *</label>
+          <select name="screen_id" class="f-input" required>
+            <option value="">— Screen —</option>
+            {% for s in screens %}<option value="{{ s.id }}">{{ s.theater_name }} — {{ s.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2"><label class="text-muted small d-block mb-1">Date *</label><input type="date" name="show_date" class="f-input" required></div>
+        <div class="col-md-2"><label class="text-muted small d-block mb-1">Time *</label><input type="time" name="show_time" class="f-input" required></div>
+        <div class="col-md-1"><label class="text-muted small d-block mb-1">Std ₹</label><input type="number" name="price_standard" class="f-input" value="200"></div>
+        <div class="col-md-1"><label class="text-muted small d-block mb-1">Prem ₹</label><input type="number" name="price_premium" class="f-input" value="350"></div>
+        <div class="col-12"><button type="submit" class="cn-btn-wine"><i class="bi bi-plus me-1"></i>Add Showtime</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- BOOKINGS TAB -->
+  <div id="atab-bookings" style="display:none">
+    <div class="admin-panel">
+      <div class="admin-panel-head">Recent Bookings (last 50)</div>
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead><tr><th>Ref</th><th>User</th><th>Movie</th><th>Theater</th><th>Date</th><th>Seats</th><th>Tickets</th><th>Food</th><th>Total</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for b in bookings %}
+            <tr>
+              <td><span class="booking-ref-chip">{{ b.booking_ref }}</span></td>
+              <td class="text-light small">{{ b.user_name }}</td>
+              <td class="text-muted small">{{ b.movie_title[:20] }}{% if b.movie_title|length>20 %}…{% endif %}</td>
+              <td class="text-muted small">{{ b.theater_name[:18] }}{% if b.theater_name|length>18 %}…{% endif %}</td>
+              <td class="text-muted small">{{ b.show_date.strftime('%d %b') }}</td>
+              <td class="wine-text small fw-semibold">{{ b.seat_numbers }}</td>
+              <td class="text-light small">₹{{ b.ticket_amount|int }}</td>
+              <td class="text-light small">₹{{ b.food_amount|int }}</td>
+              <td class="text-light fw-bold small">₹{{ b.total_amount|int }}</td>
+              <td><span class="badge {{ 'bg-success' if b.status=='confirmed' else 'bg-danger' }} small">{{ b.status.title() }}</span></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- USERS TAB -->
+  <div id="atab-users" style="display:none">
+    <div class="admin-panel">
+      <div class="admin-panel-head">Registered Users ({{ users|length }})</div>
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>Joined</th></tr></thead>
+          <tbody>
+            {% for u in users %}
+            <tr>
+              <td class="text-muted">{{ loop.index }}</td>
+              <td class="text-light fw-semibold small">{{ u.name }}</td>
+              <td class="text-muted small">{{ u.email }}</td>
+              <td class="text-muted small">{{ u.phone or '—' }}</td>
+              <td class="text-muted small">{{ u.created_at.strftime('%d %b %Y') }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Movie Modal -->
+<div class="modal fade" id="editMovieModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content" style="background:var(--card2);border:1px solid var(--border2);border-radius:16px;">
+      <div class="modal-header border-0"><h6 class="modal-title text-light">Edit Movie</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form method="POST" id="editMovieForm" enctype="multipart/form-data">
+          <div class="row g-3">
+            <div class="col-md-8"><div class="af"><label class="text-muted small">Title *</label><input type="text" name="title" id="e_title" class="f-input" required></div></div>
+            <div class="col-md-4"><div class="af"><label class="text-muted small">Language</label>
+              <select name="language" id="e_lang" class="f-input">
+                {% for l in ['Tamil','Telugu','Malayalam','Hindi','Hollywood'] %}<option value="{{ l }}">{{ l }}</option>{% endfor %}
+              </select>
+            </div></div>
+            <div class="col-12"><div class="af"><label class="text-muted small">Description</label><textarea name="description" id="e_desc" class="f-input" rows="2"></textarea></div></div>
+            <div class="col-md-6"><div class="af"><label class="text-muted small">Genre</label><input type="text" name="genre" id="e_genre" class="f-input"></div></div>
+            <div class="col-md-3"><div class="af"><label class="text-muted small">Duration</label><input type="text" name="duration" id="e_dur" class="f-input"></div></div>
+            <div class="col-md-3"><div class="af"><label class="text-muted small">Rating</label><input type="number" name="rating" id="e_rating" class="f-input" step="0.1" min="0" max="10"></div></div>
+            <div class="col-md-6"><div class="af"><label class="text-muted small">Director</label><input type="text" name="director" id="e_dir" class="f-input"></div></div>
+            <div class="col-md-6"><div class="af"><label class="text-muted small">Year</label><input type="number" name="year" id="e_year" class="f-input"></div></div>
+            <div class="col-12"><div class="af"><label class="text-muted small">Cast</label><input type="text" name="cast" id="e_cast" class="f-input"></div></div>
+            <div class="col-md-6"><div class="af"><label class="text-muted small">Trailer ID (YouTube)</label><input type="text" name="trailer_id" id="e_trailer" class="f-input"></div></div>
+            <div class="col-md-6"><div class="af"><label class="text-muted small">Poster URL</label><input type="text" name="poster_url" id="e_poster" class="f-input"></div></div>
+            <div class="col-12"><div class="af"><label class="text-muted small">Upload New Poster</label><input type="file" name="poster" class="f-input" accept="image/*"></div></div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="cn-btn-wine"><i class="bi bi-check me-1"></i>Save Changes</button>
+            <button type="button" class="cn-btn-ghost" data-bs-dismiss="modal">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function adminTab(tab, btn) {
+  document.querySelectorAll('.cn-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  ['movies','theaters','screens','showtimes','bookings','users'].forEach(t=>{
+    document.getElementById('atab-'+t).style.display = t===tab?'':'none';
+  });
+}
+function openEditMovie(mid) {
+  fetch('/api/movie/'+mid).then(r=>r.json()).then(m=>{
+    document.getElementById('e_title').value   = m.title||'';
+    document.getElementById('e_lang').value    = m.language||'';
+    document.getElementById('e_desc').value    = m.description||'';
+    document.getElementById('e_genre').value   = m.genre||'';
+    document.getElementById('e_dur').value     = m.duration||'';
+    document.getElementById('e_rating').value  = m.rating||'';
+    document.getElementById('e_dir').value     = m.director||'';
+    document.getElementById('e_year').value    = m.release_year||'';
+    document.getElementById('e_cast').value    = m.cast_members||'';
+    document.getElementById('e_trailer').value = m.trailer_id||'';
+    document.getElementById('e_poster').value  = m.poster_url||'';
+    document.getElementById('editMovieForm').action = '/admin/edit-movie/'+mid;
+    new bootstrap.Modal(document.getElementById('editMovieModal')).show();
+  });
+}
+function playTrailer(ytId,title){
+  document.getElementById('trailerTitle').textContent=title+' — Trailer';
+  document.getElementById('trailerFrame').src='https://www.youtube.com/embed/'+ytId+'?autoplay=1&rel=0';
+  new bootstrap.Modal(document.getElementById('trailerModal')).show();
+}
+function stopTrailer(){document.getElementById('trailerFrame').src='';}
+document.getElementById('trailerModal').addEventListener('hide.bs.modal',stopTrailer);
+
+// Hash-based tab switching
+const hash=window.location.hash.replace('#tab-','');
+if(hash){const btn=document.querySelector(`[onclick*="adminTab('${hash}'"]`);if(btn)adminTab(hash,btn);}
+
+// Set min date
+document.querySelectorAll('input[type=date]').forEach(d=>{if(!d.min)d.min=new Date().toISOString().split('T')[0];});
+</script>
+{% endblock %}

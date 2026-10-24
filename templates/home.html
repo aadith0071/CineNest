@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}CineNest — Book Tickets Online{% endblock %}
+{% block content %}
+
+<!-- HERO -->
+<section class="hero-section">
+  <div class="hero-particles"></div>
+  <div class="container-xl">
+    <div class="row align-items-center" style="min-height:92vh;padding:80px 0 60px;">
+      <div class="col-lg-6 hero-left">
+        <div class="hero-badge">
+          <span class="badge-dot"></span>
+          <span>Live Now in Theatres</span>
+        </div>
+        <h1 class="hero-h1">The Big Screen<br><span class="wine-gradient-text">Experience</span><br>Awaits You</h1>
+        <p class="hero-sub">Book tickets for 150+ films across Tamil, Telugu, Malayalam, Hindi & Hollywood. Choose your city, pick your seats.</p>
+        <div class="d-flex gap-3 flex-wrap mt-4">
+          <a href="#movies" class="cn-btn-wine btn-lg"><i class="bi bi-film me-2"></i>Browse Films</a>
+          {% if not session.get('user_id') %}
+          <a href="{{ url_for('register') }}" class="cn-btn-outline btn-lg"><i class="bi bi-person-plus me-2"></i>Join Free</a>
+          {% endif %}
+        </div>
+        <!-- Language quick filters -->
+        <div class="hero-lang-pills mt-5">
+          {% set lang_icons = {'Tamil':'🎬','Telugu':'🎥','Malayalam':'🎞️','Hindi':'🎦','Hollywood':'⭐'} %}
+          {% for lang in languages %}
+          <a href="{{ url_for('home', lang=lang) }}" class="lang-pill {{ 'active' if selected_lang==lang }}">
+            {{ lang_icons[lang] }} {{ lang }}
+            <span class="lang-count">{{ lang_counts[lang] }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="col-lg-6 d-none d-lg-block hero-right">
+        <div class="hero-collage">
+          {% set featured = [
+            ('Amaran','https://upload.wikimedia.org/wikipedia/en/thumb/1/1a/Amaran_film_poster.jpg/220px-Amaran_film_poster.jpg'),
+            ('Pushpa 2','https://upload.wikimedia.org/wikipedia/en/thumb/c/ce/Pushpa_2_poster.jpg/220px-Pushpa_2_poster.jpg'),
+            ('Bramayugam','https://upload.wikimedia.org/wikipedia/en/thumb/3/3c/Bramayugam_poster.jpg/220px-Bramayugam_poster.jpg'),
+            ('Oppenheimer','https://upload.wikimedia.org/wikipedia/en/thumb/4/4a/Oppenheimer_%28film%29.jpg/220px-Oppenheimer_%28film%29.jpg'),
+            ('Chhaava','https://upload.wikimedia.org/wikipedia/en/thumb/e/e3/Chhaava_poster.jpg/220px-Chhaava_poster.jpg')
+          ] %}
+          {% for name, url in featured %}
+          <div class="collage-card collage-{{ loop.index }}">
+            <img src="{{ url }}" alt="{{ name }}" onerror="this.src='/static/images/placeholder.svg'">
+            <div class="collage-overlay">{{ name }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MOBILE SEARCH -->
+<div class="d-lg-none" style="background:var(--bg2);padding:14px 16px;">
+  <form method="GET" action="{{ url_for('home') }}">
+    <div class="cn-search-wrap w-100">
+      <i class="bi bi-search search-ico"></i>
+      <input class="cn-search-input" type="search" name="search" placeholder="Search movies..." value="{{ search }}">
+      <button class="cn-search-btn" type="submit">Go</button>
+    </div>
+  </form>
+</div>
+
+<!-- GENRE FILTER BAR -->
+<div class="filter-bar sticky-top" id="movies">
+  <div class="container-xl">
+    <div class="filter-scroll">
+      <a href="{{ url_for('home') }}" class="filter-chip {{ 'active' if not selected_lang and not selected_genre and not search }}">
+        <i class="bi bi-grid-fill me-1"></i>All Films
+      </a>
+      {% for lang in languages %}
+      <a href="{{ url_for('home', lang=lang) }}" class="filter-chip {{ 'active' if selected_lang==lang }}">{{ lang }}</a>
+      {% endfor %}
+      <div class="filter-sep"></div>
+      {% for g in genres[:15] %}
+      <a href="{{ url_for('home', genre=g) }}" class="filter-chip {{ 'active' if selected_genre==g }}">{{ g }}</a>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- SECTION HEADER -->
+<div class="container-xl mt-5 mb-3">
+  <div class="d-flex justify-content-between align-items-end flex-wrap gap-3">
+    <div>
+      <h2 class="sec-title">
+        {% if search %}Results for "<span class="wine-text">{{ search }}</span>"
+        {% elif selected_lang %}<span class="wine-text">{{ selected_lang }}</span> Films
+        {% elif selected_genre %}<span class="wine-text">{{ selected_genre }}</span>
+        {% else %}Now Showing
+        {% endif %}
+      </h2>
+      <p class="text-muted mb-0">{{ total }} film{{ 's' if total != 1 }} found</p>
+    </div>
+    {% if search or selected_lang or selected_genre %}
+    <a href="{{ url_for('home') }}" class="cn-btn-ghost btn-sm"><i class="bi bi-x-lg me-1"></i>Clear filter</a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- MOVIES GRID -->
+<div class="container-xl pb-5">
+  {% if movies %}
+  <div class="movies-grid" id="moviesGrid">
+    {% for m in movies %}
+    <div class="movie-card" data-idx="{{ loop.index0 }}">
+      <!-- Poster -->
+      <div class="movie-poster-wrap">
+        <img class="movie-poster-img"
+             src="{{ m.poster_url }}"
+             alt="{{ m.title }}"
+             loading="lazy"
+             onerror="this.onerror=null;this.src='/static/images/placeholder.svg'">
+        <!-- Rating badge -->
+        <div class="poster-top-row">
+          <span class="rating-badge"><i class="bi bi-star-fill"></i> {{ m.rating }}</span>
+          <span class="lang-badge">{{ m.language }}</span>
+        </div>
+        <!-- Hover overlay -->
+        <div class="poster-overlay">
+          {% if m.trailer_id and m.trailer_id != 'placeholder' %}
+          <button class="overlay-btn trailer-btn"
+                  onclick="playTrailer('{{ m.trailer_id }}','{{ m.title }}')">
+            <i class="bi bi-play-circle-fill me-1"></i>Trailer
+          </button>
+          {% endif %}
+          <a href="{{ url_for('movie_detail', mid=m.id) }}" class="overlay-btn details-btn">
+            <i class="bi bi-info-circle me-1"></i>Details
+          </a>
+        </div>
+      </div>
+      <!-- Card body -->
+      <div class="movie-card-body">
+        <h5 class="movie-title">{{ m.title }}</h5>
+        <div class="movie-meta">
+          <span><i class="bi bi-clock"></i> {{ m.duration }}</span>
+          {% if m.release_year %}<span><i class="bi bi-calendar3"></i> {{ m.release_year }}</span>{% endif %}
+        </div>
+        <div class="genre-pills mb-3">
+          {% for g in m.genre.split(',')[:2] %}<span class="gpill">{{ g.strip() }}</span>{% endfor %}
+        </div>
+        <a href="{{ url_for('movie_detail', mid=m.id) }}" class="book-btn">
+          <i class="bi bi-ticket-perforated me-2"></i>Book Now
+        </a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- PAGINATION -->
+  {% if pages > 1 %}
+  <div class="d-flex justify-content-center gap-2 mt-5 flex-wrap">
+    {% if page > 1 %}
+    <a href="{{ url_for('home', page=page-1, lang=selected_lang, genre=selected_genre, search=search) }}" class="page-btn"><i class="bi bi-chevron-left"></i></a>
+    {% endif %}
+    {% for p in range(1, pages+1) %}
+    <a href="{{ url_for('home', page=p, lang=selected_lang, genre=selected_genre, search=search) }}"
+       class="page-btn {{ 'active' if p==page }}">{{ p }}</a>
+    {% endfor %}
+    {% if page < pages %}
+    <a href="{{ url_for('home', page=page+1, lang=selected_lang, genre=selected_genre, search=search) }}" class="page-btn"><i class="bi bi-chevron-right"></i></a>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="empty-state"><div class="empty-icon"><i class="bi bi-film"></i></div>
+    <h3>No movies found</h3><p class="text-muted">Try a different search or filter.</p>
+    <a href="{{ url_for('home') }}" class="cn-btn-wine mt-3">View All</a>
+  </div>
+  {% endif %}
+</div>
+
+<!-- WHY CINENEST -->
+<section style="background:var(--bg2);padding:72px 0;border-top:1px solid var(--border);">
+  <div class="container-xl">
+    <h2 class="sec-title text-center mb-1">Why <span class="wine-text">CineNest</span>?</h2>
+    <p class="text-muted text-center mb-5">Everything you need for the perfect cinema experience</p>
+    <div class="row g-4">
+      {% for icon,title,desc in [
+        ('lightning-fill','Instant Booking','Book seats in under 60 seconds — no queues, no hassle'),
+        ('shield-check','100% Secure','All payments encrypted with instant e-ticket confirmation'),
+        ('geo-alt-fill','14+ Cities','From Chennai to Mumbai to Bangalore — we have you covered'),
+        ('camera-reels-fill','150+ Films','Tamil, Telugu, Malayalam, Hindi & Hollywood — all in one place')
+      ] %}
+      <div class="col-md-6 col-xl-3">
+        <div class="feature-card text-center">
+          <div class="feature-icon"><i class="bi bi-{{ icon }}"></i></div>
+          <h6 class="feature-title">{{ title }}</h6>
+          <p class="feature-desc">{{ desc }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function playTrailer(ytId, title) {
+  document.getElementById('trailerTitle').textContent = title + ' — Official Trailer';
+  document.getElementById('trailerFrame').src =
+    'https://www.youtube.com/embed/' + ytId + '?autoplay=1&rel=0&modestbranding=1';
+  new bootstrap.Modal(document.getElementById('trailerModal')).show();
+}
+function stopTrailer() { document.getElementById('trailerFrame').src = ''; }
+document.getElementById('trailerModal').addEventListener('hide.bs.modal', stopTrailer);
+</script>
+{% endblock %}

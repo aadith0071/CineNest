@@ -1,0 +1,13 @@
+
+# Python virtual environment
+venv/
+__pycache__/
+*.py[cod]
+
+# Local credentials and secrets
+db_config.py
+.env
+.env.*
+
+# Local editor settings
+.vscode/

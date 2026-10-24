@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ movie.title }} — CineNest{% endblock %}
+{% block content %}
+<div class="detail-hero">
+  <div class="detail-bg" style="background-image:url('{{ movie.poster_url }}')"></div>
+  <div class="detail-bg-overlay"></div>
+  <div class="container-xl py-5 position-relative" style="z-index:2;">
+    <nav class="breadcrumb-nav mb-4">
+      <a href="{{ url_for('home') }}" class="bc-link">Home</a>
+      <i class="bi bi-chevron-right bc-sep"></i>
+      <a href="{{ url_for('home', lang=movie.language) }}" class="bc-link">{{ movie.language }}</a>
+      <i class="bi bi-chevron-right bc-sep"></i>
+      <span class="text-muted">{{ movie.title }}</span>
+    </nav>
+    <div class="row g-5 align-items-start">
+      <div class="col-md-3 col-sm-5">
+        <div class="detail-poster-frame">
+          <img src="{{ movie.poster_url }}" alt="{{ movie.title }}" class="detail-poster-img"
+               onerror="this.onerror=null;this.src='/static/images/placeholder.svg'">
+          <div class="poster-lang-tag">{{ movie.language }}</div>
+        </div>
+      </div>
+      <div class="col-md-9 col-sm-7">
+        <h1 class="detail-title">{{ movie.title }}</h1>
+        <div class="detail-chips d-flex flex-wrap gap-2 mb-3">
+          <span class="dchip rating-chip"><i class="bi bi-star-fill text-warning me-1"></i>{{ movie.rating }}/10</span>
+          <span class="dchip"><i class="bi bi-clock me-1"></i>{{ movie.duration }}</span>
+          <span class="dchip"><i class="bi bi-translate me-1"></i>{{ movie.language }}</span>
+          {% if movie.release_year %}<span class="dchip"><i class="bi bi-calendar3 me-1"></i>{{ movie.release_year }}</span>{% endif %}
+        </div>
+        <div class="genre-pills mb-3">
+          {% for g in movie.genre.split(',') %}<span class="gpill">{{ g.strip() }}</span>{% endfor %}
+        </div>
+        <p class="detail-desc">{{ movie.description }}</p>
+        {% if movie.director %}<p class="detail-crew"><strong>Director:</strong> {{ movie.director }}</p>{% endif %}
+        {% if movie.cast_members %}<p class="detail-crew"><strong>Cast:</strong> {{ movie.cast_members }}</p>{% endif %}
+        <div class="d-flex flex-wrap gap-3 mt-4">
+          {% if session.get('user_id') %}
+          <a href="{{ url_for('select_city', mid=movie.id) }}" class="cn-btn-wine btn-lg">
+            <i class="bi bi-ticket-perforated me-2"></i>Book Tickets
+          </a>
+          {% else %}
+          <a href="{{ url_for('login') }}" class="cn-btn-wine btn-lg">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Login to Book
+          </a>
+          {% endif %}
+          {% if movie.trailer_id and movie.trailer_id != 'placeholder' %}
+          <button class="cn-btn-outline btn-lg" onclick="playTrailer('{{ movie.trailer_id }}','{{ movie.title }}')">
+            <i class="bi bi-play-circle-fill me-2"></i>Watch Trailer
+          </button>
+          {% endif %}
+          <a href="{{ url_for('home') }}" class="cn-btn-ghost btn-lg"><i class="bi bi-arrow-left me-2"></i>Back</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function playTrailer(ytId,title){
+  document.getElementById('trailerTitle').textContent=title+' — Trailer';
+  document.getElementById('trailerFrame').src='https://www.youtube.com/embed/'+ytId+'?autoplay=1&rel=0';
+  new bootstrap.Modal(document.getElementById('trailerModal')).show();
+}
+function stopTrailer(){document.getElementById('trailerFrame').src='';}
+document.getElementById('trailerModal').addEventListener('hide.bs.modal',stopTrailer);
+</script>
+{% endblock %}

@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300" fill="none">
+  <rect width="200" height="300" fill="#16121f"/>
+  <rect x="1" y="1" width="198" height="298" rx="2" stroke="#2d2840" stroke-width="1"/>
+  <!-- film strip top -->
+  <rect x="20" y="12" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="44" y="12" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="68" y="12" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="92" y="12" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="116" y="12" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="140" y="12" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="164" y="12" width="16" height="10" rx="2" fill="#2d2840"/>
+  <!-- main area -->
+  <rect x="20" y="32" width="160" height="200" rx="4" fill="#1d1828"/>
+  <!-- play icon -->
+  <circle cx="100" cy="132" r="30" fill="rgba(124,16,52,0.25)" stroke="rgba(124,16,52,0.5)" stroke-width="2"/>
+  <path d="M92 118 L92 146 L116 132 Z" fill="rgba(124,16,52,0.7)"/>
+  <!-- text -->
+  <rect x="40" y="252" width="120" height="8" rx="4" fill="#2d2840"/>
+  <rect x="60" y="268" width="80" height="6" rx="3" fill="#1d1828"/>
+  <!-- film strip bottom -->
+  <rect x="20" y="278" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="44" y="278" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="68" y="278" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="92" y="278" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="116" y="278" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="140" y="278" width="16" height="10" rx="2" fill="#2d2840"/>
+  <rect x="164" y="278" width="16" height="10" rx="2" fill="#2d2840"/>
+</svg>

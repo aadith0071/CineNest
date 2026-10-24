@@ -1,0 +1,191 @@
+{% extends "base.html" %}
+{% block title %}Food & Drinks — CineNest{% endblock %}
+{% block content %}
+<div class="container-xl py-4">
+
+  <!-- Progress Steps -->
+  <div class="booking-steps mb-5">
+    <div class="step done"><div class="step-circle"><i class="bi bi-check"></i></div><div class="step-label">Seats</div></div>
+    <div class="step-line done"></div>
+    <div class="step active"><div class="step-circle">2</div><div class="step-label">Food</div></div>
+    <div class="step-line"></div>
+    <div class="step"><div class="step-circle">3</div><div class="step-label">Confirm</div></div>
+  </div>
+
+  <div class="row g-4">
+    <!-- Menu -->
+    <div class="col-lg-8">
+      <h2 class="sec-title mb-1">Canteen Menu</h2>
+      <p class="text-muted mb-4">Add snacks & drinks to your booking — ready at your seat!</p>
+
+      {% set categories = menu | groupby('cat') %}
+      {% for cat, items in categories %}
+      <div class="menu-section mb-4">
+        <div class="menu-cat-header">{{ cat }}</div>
+        <div class="menu-grid">
+          {% for item in items %}
+          <div class="menu-item-card" id="card-{{ item.id }}">
+            <div class="menu-emoji">{{ item.emoji }}</div>
+            <div class="menu-item-info">
+              <div class="menu-item-name">{{ item.name }}</div>
+              <div class="menu-item-price wine-text fw-bold">₹{{ item.price }}</div>
+            </div>
+            <div class="qty-ctrl">
+              <button class="qty-btn" onclick="changeQty('{{ item.id }}', -1)"><i class="bi bi-dash"></i></button>
+              <span class="qty-val" id="qty-{{ item.id }}">0</span>
+              <button class="qty-btn" onclick="changeQty('{{ item.id }}', 1)"><i class="bi bi-plus"></i></button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Order Summary -->
+    <div class="col-lg-4">
+      <div class="bk-summary sticky-top" style="top:80px;" id="foodSummary">
+        <div class="bk-summary-head"><i class="bi bi-bag-check me-2"></i>Your Order</div>
+        <div class="bk-movie-info">
+          <div class="fw-semibold text-light">{{ showtime.movie_title }}</div>
+          <div class="text-muted small">{{ showtime.theater_name }}</div>
+          <div class="text-muted small">Seats: <span class="wine-text fw-bold" id="seats-display">{{ seats }}</span></div>
+        </div>
+
+        <div class="bk-divider"></div>
+
+        <!-- Tickets subtotal -->
+        <div class="bk-row"><span class="text-muted">Ticket Amount</span><span class="text-light">₹<span id="ticket-amt">{{ ticket_amt|int }}</span></span></div>
+
+        <!-- Food items -->
+        <div id="food-lines"><div class="text-muted small text-center py-2">No food added yet</div></div>
+
+        <div class="bk-divider"></div>
+        <div class="bk-row"><span class="text-muted">Food Total</span><span class="text-light">₹<span id="food-total">0</span></span></div>
+        <div class="bk-total-row mt-2">
+          <span class="fw-bold text-light">Grand Total</span>
+          <span class="bk-total-val">₹<span id="grand-total">{{ ticket_amt|int }}</span></span>
+        </div>
+
+        <button class="cn-btn-wine w-100 mt-3" style="padding:13px;font-size:.95rem;" onclick="confirmBooking()">
+          <i class="bi bi-lock-fill me-2"></i>Confirm & Pay
+        </button>
+        <button class="cn-btn-ghost w-100 mt-2" style="padding:10px;font-size:.85rem;" onclick="skipFood()">
+          <i class="bi bi-skip-forward me-2"></i>Skip Food & Confirm
+        </button>
+        <div class="secure-note mt-2"><i class="bi bi-shield-check-fill text-success me-1"></i>Instant Confirmation</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Processing Modal -->
+<div class="modal fade" id="procModal" data-bs-backdrop="static" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="background:var(--card);border:1px solid var(--border);border-radius:16px;text-align:center;padding:40px 20px;">
+      <div class="cn-spinner mx-auto mb-3"></div>
+      <h6 class="text-light">Confirming your booking...</h6>
+      <p class="text-muted small mb-0">Please do not close this window</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const SHOWTIME_ID  = {{ showtime.id }};
+const TICKET_AMT   = {{ ticket_amt }};
+const SEATS        = '{{ seats }}'.split(',').filter(Boolean);
+
+const MENU = {
+  {% for item in menu %}
+  '{{ item.id }}': {name:'{{ item.name }}', price:{{ item.price }}},
+  {% endfor %}
+};
+
+let cart = {};
+
+function changeQty(id, delta) {
+  cart[id] = Math.max(0, (cart[id] || 0) + delta);
+  if (cart[id] === 0) delete cart[id];
+  document.getElementById('qty-' + id).textContent = cart[id] || 0;
+
+  // Highlight card if selected
+  const card = document.getElementById('card-' + id);
+  if (cart[id] > 0) card.classList.add('item-selected');
+  else card.classList.remove('item-selected');
+
+  updateFoodSummary();
+}
+
+function updateFoodSummary() {
+  const lines   = document.getElementById('food-lines');
+  const ftEl    = document.getElementById('food-total');
+  const gtEl    = document.getElementById('grand-total');
+  const items   = Object.keys(cart);
+  let foodTotal = 0;
+
+  if (items.length === 0) {
+    lines.innerHTML = '<div class="text-muted small text-center py-2">No food added yet</div>';
+  } else {
+    lines.innerHTML = items.map(id => {
+      const item = MENU[id];
+      const line = item.price * cart[id];
+      foodTotal += line;
+      return `<div class="bk-row"><span class="text-muted small">${item.name} x${cart[id]}</span><span class="text-light small">₹${line}</span></div>`;
+    }).join('');
+    foodTotal = items.reduce((s, id) => s + MENU[id].price * cart[id], 0);
+  }
+
+  ftEl.textContent  = foodTotal;
+  gtEl.textContent  = Math.round(TICKET_AMT + foodTotal);
+}
+
+function buildFoodPayload() {
+  return Object.keys(cart).map(id => ({
+    name:  MENU[id].name,
+    qty:   cart[id],
+    price: MENU[id].price
+  }));
+}
+
+function confirmBooking() {
+  const foodAmt  = Object.keys(cart).reduce((s,id) => s + MENU[id].price * cart[id], 0);
+  doBooking(buildFoodPayload(), foodAmt);
+}
+
+function skipFood() {
+  doBooking([], 0);
+}
+
+function doBooking(foodItems, foodAmt) {
+  const modal = new bootstrap.Modal(document.getElementById('procModal'));
+  modal.show();
+
+  fetch('/confirm-booking', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+      showtime_id:   SHOWTIME_ID,
+      seats:         SEATS,
+      food:          foodItems,
+      ticket_amount: TICKET_AMT,
+      food_amount:   foodAmt
+    })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      window.location.href = '/booking/' + data.booking_ref;
+    } else {
+      modal.hide();
+      alert('Booking failed: ' + data.message);
+    }
+  })
+  .catch(() => {
+    modal.hide();
+    alert('Network error. Please try again.');
+  });
+}
+</script>
+{% endblock %}

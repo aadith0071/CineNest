@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}My Bookings — CineNest{% endblock %}
+{% block content %}
+<div class="container-xl py-5">
+  <div class="d-flex justify-content-between align-items-center mb-5 flex-wrap gap-3">
+    <div>
+      <h2 class="sec-title">My Bookings</h2>
+      <p class="text-muted">All your CineNest tickets in one place</p>
+    </div>
+    <a href="{{ url_for('home') }}" class="cn-btn-wine"><i class="bi bi-plus me-2"></i>Book More</a>
+  </div>
+
+  {% if bookings %}
+  <div class="cn-tabs-wrap mb-4">
+    <button class="cn-tab active" onclick="switchTab('upcoming',this)"><i class="bi bi-calendar-check me-1"></i>Upcoming</button>
+    <button class="cn-tab" onclick="switchTab('past',this)"><i class="bi bi-clock-history me-1"></i>Past</button>
+  </div>
+
+  <div id="tab-upcoming">
+    {% set upcoming = [] %}
+    {% for b in bookings %}{% if b.show_date >= today %}{% set _ = upcoming.append(b) %}{% endif %}{% endfor %}
+    {% if upcoming %}
+    <div class="row g-4">
+      {% for b in upcoming %}
+      <div class="col-md-6">
+        <div class="bk-ticket-card upcoming-card">
+          <div class="btc-top">
+            <div class="btc-poster">
+              <img src="{{ b.poster_url }}" alt="{{ b.movie_title }}"
+                   onerror="this.onerror=null;this.src='/static/images/placeholder.svg'">
+            </div>
+            <div class="btc-info">
+              <h6 class="btc-title">{{ b.movie_title }}</h6>
+              <span class="lang-badge">{{ b.language }}</span>
+              <div class="btc-meta"><i class="bi bi-building me-1 wine-text"></i>{{ b.theater_name }}</div>
+              <div class="btc-meta"><i class="bi bi-geo-alt me-1 wine-text"></i>{{ b.city_name }}</div>
+            </div>
+            <span class="status-chip upcoming-chip"><i class="bi bi-clock-fill me-1"></i>Upcoming</span>
+          </div>
+          <div class="btc-details">
+            <div class="btc-detail"><i class="bi bi-calendar3 wine-text"></i>{{ b.show_date.strftime('%A, %d %B %Y') }}</div>
+            <div class="btc-detail"><i class="bi bi-clock wine-text"></i>{{ '%02d:%02d'|format(b.show_time.seconds//3600,(b.show_time.seconds%3600)//60) if b.show_time.__class__.__name__=='timedelta' else str(b.show_time)[:5] }}</div>
+            <div class="btc-detail"><i class="bi bi-display wine-text"></i>{{ b.screen_name }}</div>
+            <div class="btc-detail"><i class="bi bi-grid-3x3-gap wine-text"></i><span class="wine-text fw-bold">{{ b.seat_numbers }}</span></div>
+          </div>
+          <div class="btc-footer">
+            <div><div class="btc-ref-label">Booking ID</div><div class="btc-ref">{{ b.booking_ref }}</div></div>
+            <span class="btc-amount">₹{{ b.total_amount|int }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon"><i class="bi bi-calendar-plus"></i></div><h4>No upcoming bookings</h4><a href="{{ url_for('home') }}" class="cn-btn-wine mt-3">Book Now</a></div>
+    {% endif %}
+  </div>
+
+  <div id="tab-past" style="display:none">
+    {% set past = [] %}
+    {% for b in bookings %}{% if b.show_date < today %}{% set _ = past.append(b) %}{% endif %}{% endfor %}
+    {% if past %}
+    <div class="row g-4">
+      {% for b in past %}
+      <div class="col-md-6">
+        <div class="bk-ticket-card past-card">
+          <div class="btc-top">
+            <div class="btc-poster" style="opacity:.5">
+              <img src="{{ b.poster_url }}" alt="{{ b.movie_title }}"
+                   onerror="this.onerror=null;this.src='/static/images/placeholder.svg'">
+            </div>
+            <div class="btc-info">
+              <h6 class="btc-title text-muted">{{ b.movie_title }}</h6>
+              <div class="btc-meta text-muted"><i class="bi bi-building me-1"></i>{{ b.theater_name }}</div>
+            </div>
+            <span class="status-chip past-chip"><i class="bi bi-check-circle-fill me-1"></i>Watched</span>
+          </div>
+          <div class="btc-footer" style="opacity:.6">
+            <div><div class="btc-ref-label">Booking ID</div><div class="btc-ref">{{ b.booking_ref }}</div></div>
+            <span class="text-muted fw-bold">₹{{ b.total_amount|int }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon"><i class="bi bi-camera-reels"></i></div><h4>No past bookings</h4></div>
+    {% endif %}
+  </div>
+
+  {% else %}
+  <div class="empty-state">
+    <div class="empty-icon"><i class="bi bi-ticket-perforated"></i></div>
+    <h3>No bookings yet</h3>
+    <p class="text-muted">Start your cinema journey today!</p>
+    <a href="{{ url_for('home') }}" class="cn-btn-wine btn-lg mt-3"><i class="bi bi-film me-2"></i>Browse Movies</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+function switchTab(tab, btn) {
+  document.querySelectorAll('.cn-tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-upcoming').style.display = tab==='upcoming' ? '' : 'none';
+  document.getElementById('tab-past').style.display     = tab==='past'     ? '' : 'none';
+}
+</script>
+{% endblock %}
